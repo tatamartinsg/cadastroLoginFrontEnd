@@ -67,20 +67,22 @@
                 <a href="#"><i class="fab fa-google-plus-g"></i></a>
                 <p>or use your email for login:</p>
                 
-                <form class="form formLOGIN">
-                    <label for="exampleInputEmailIN">
-                        <i class="far fa-envelope icon-modify"></i>
-                        <input  type="email" class="form-control " id="exampleInputEmailIN" aria-describedby="emailHelp" placeholder="email" name="email">
-                        <small id="emailHelp" class="form-text text-muted">We'll never share your email with anyone else.</small>
-                    </label>
-                            
-                    <label for="exampleInputPasswordIN">
-                        <i class="far fas fa-lock icon-modify"></i>
-                        <input placeholder="password" type="password" class="form-control" id="exampleInputPasswordIN" name="password">
-                    </label>
                 
-                    <button id="signIN" class="btn btn-success">Sign In</button>
-                    
+                    <form class="form formLOGIN">
+                        <div class="form-group row">
+                            <label for="exampleInputEmailIN"> <i class="far fa-envelope icon-modify"></i></label>
+                            <div class="col-sm-10">
+                                <input v-model="email"  type="email" class="form-control " id="exampleInputEmailIN" aria-describedby="emailHelp" placeholder="email" name="email">
+                                <!-- <small id="emailHelp" class="form-text text-muted"></small> -->
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="exampleInputPasswordIN"><i class="far fas fa-lock icon-modify"></i></label>
+                            <div class="col-sm-10">
+                                <input v-model="password" placeholder="password" type="password" class="form-control" id="exampleInputPasswordIN" name="password">
+                            </div>                            
+                        </div>               
+                        <button v-on:click.prevent="loginAxios()" id="signIN" class="btn btn-success">Sign In</button>              
                 </form>
             </div>
         </div>
@@ -91,7 +93,7 @@
 
 <script>
 // import Api from '../../services/cadastroAPI'
-// import axios from 'axios'
+import axios from 'axios'
 import Vue from 'vue'
 import VueToastr from '@deveodk/vue-toastr'
 import '@deveodk/vue-toastr/dist/@deveodk/vue-toastr.css'
@@ -99,6 +101,7 @@ import '@deveodk/vue-toastr/dist/@deveodk/vue-toastr.css'
 import { ValidEmail } from '../js/ValidEmail.js'
 import { ValidPassword } from '../js/ValidPassword.js'
 import { ValidName } from '../js/ValidName.js'
+// import func from 'vue-editor-bridge'
 
 Vue.use(VueToastr, {
     defaultPosition: 'toast-top-right',
@@ -108,15 +111,6 @@ Vue.use(VueToastr, {
 
 export default {
     name:'FirsPage',
-    // mounted(){
-    //     Api.getAllCadastros()
-    //         .then(response => {
-    //             console.log('res', response)
-    //         })
-    //         .catch(error => {
-    //             console.log('error', error)
-    //         })
-    // },
     data(){
         return{
             title: 'Home Page',
@@ -131,45 +125,111 @@ export default {
         changeClass: function(){
             this.isActive =  !this.isActive
             this.isNotActive = !this.isNotActive
-            this.$toastr('success', 'i am a toastr success', 'hello')
         },
-        alertToastr: function(message){
-             this.$toastr('warning',`${message}`)
+        alertToastr: function(type,message,title){
+             this.$toastr(type,message,title)
         },
-        insertCadastro: async function(){
+        validaEmail: function(emailValue){
             let message
 
+            if (ValidEmail(emailValue) == 0){
+                message = 'Email inválido'
+                this.alertToastr('warning',message, 'Error')
+                return 0;
+            }
+
+            else{
+                return 1;
+            }
+        },
+        postAxios: function(path,classForm){
+            const form = document.querySelector(`${classForm}`)
+            const formData = new FormData(form)
+            const searchParams = new URLSearchParams()
+            const URL = 'http://localhost:3000'
+            for (const pair of formData){
+                searchParams.append(pair[0],pair[1])
+            }
+            const data = axios.post(`${URL}${path}`, searchParams)
+            return data
+        },
+        insertCadastro: function(){
             let emailValue = this.email
             let passwordValue = this.password
             let nameValue = this.name
 
             if(ValidName(nameValue) == 0){
+                var message;
                 message = 'Nome inválido'
-                this.alertToastr(message)
+                this.alertToastr('warning',message,'Error')
+                return 0;
             }
-            else if (ValidEmail(emailValue) == 0){
-                message = 'Email inválido'
-                this.alertToastr(message)
+    
+            else if(this.validaEmail(emailValue) == 0){
+                return 0
             }
             else if(ValidPassword(passwordValue) == 0){
                 message = 'Password inválida'
-                this.alertToastr(message)
+                this.alertToastr('warning',message,'Error')
+                return 0;
             }
-            
             else{
-                const formSIGNUP = document.querySelector('.formSIGNUP')
-                const formData = new FormData(formSIGNUP)
-                const searchParams = new URLSearchParams()
-            
-                for (const pair of formData){
-                    searchParams.append(pair[0],pair[1])
-                }
-                console.log('cadastro valido!')
-                //CONSUMIR A API POST
+                let path = '/cadastro'
+                let classForm = '.formSIGNUP'
+                this.postAxios(path,classForm)
+                    .then(res =>{
+                        console.log(res)
+                        message = 'Cadastrado com sucesso!'
+                        this.alertToastr('success',message,'Sucesso!')
+                        this.changeClass()
+                        this.email = ''
+                        this.name = ''
+                        this.password = ''
+                    })
+                    .catch(error => {
+                        console.error("There was an error!", error);
+                        if(error.response.status == 400){
+                            let message = 'Cadastro inválido.'
+                            this.alertToastr('warning', message )
+                        }
+                    })
             }
-         
+            
+        },
+        loginAxios: function(){
+            let emailValue = this.email
+            if(this.validaEmail(emailValue) == 0){
+                return 0
+            }
+            else{
+                console.log(emailValue )
+                this.postAxios('/login','.formLOGIN')
+                    .then(res => {
+                        console.log(res)
+                        console.log(res.data.token)
+                        localStorage.setItem('user-token', res.data.token)
+                        var expires = (new Date(Date.now()+ 86400)).toUTCString();
+                        document.cookie = `token=${res.data.token}; expires= ${expires};path=/;`
+                        document.cookie = `${res.data.token}`
+                    })
+                    .catch(error => {
+                        console.log(error)
+                        if(error.response.data.message == 'pass'){
+                            this.alertToastr('warning','Password Invalid','Error')
+                        }
+                        else if(error.response.data.message == 'invalid email'){
+                            this.alertToastr('warning','Email Invalid','Error')
+                        }
+                        else{
+                            this.alertToastr('success','Autenticado com sucesso.', 'Sucesso!')
+                        }
+                    })
+            }
 
+            
         }
+      
+
     }
 }
 </script>
