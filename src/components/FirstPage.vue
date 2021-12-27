@@ -92,22 +92,13 @@
 </template>
 
 <script>
-// import Api from '../../services/cadastroAPI'
-import axios from 'axios'
-import Vue from 'vue'
-import VueToastr from '@deveodk/vue-toastr'
-import '@deveodk/vue-toastr/dist/@deveodk/vue-toastr.css'
 
 import { ValidEmail } from '../js/ValidEmail.js'
 import { ValidPassword } from '../js/ValidPassword.js'
 import { ValidName } from '../js/ValidName.js'
 // import func from 'vue-editor-bridge'
 
-Vue.use(VueToastr, {
-    defaultPosition: 'toast-top-right',
-    defaultType: 'info',
-    defaultTimeout: 3000
-})
+
 
 export default {
     name:'FirsPage',
@@ -118,7 +109,8 @@ export default {
             isNotActive: true,
             email: '',
             name:'',
-            password:''
+            password:'',
+            searchParamss: []
         }
     },
     methods:{
@@ -142,18 +134,18 @@ export default {
                 return 1;
             }
         },
-        postAxios: function(path,classForm){
+        postAxios: function(classForm){
             const form = document.querySelector(`${classForm}`)
             const formData = new FormData(form)
             const searchParams = new URLSearchParams()
-            const URL = 'http://localhost:3000'
+
             for (const pair of formData){
                 searchParams.append(pair[0],pair[1])
             }
-            const data = axios.post(`${URL}${path}`, searchParams)
-            return data
+            
+            return searchParams
         },
-        insertCadastro: function(){
+        insertCadastro:  function(){
             let emailValue = this.email
             let passwordValue = this.password
             let nameValue = this.name
@@ -176,7 +168,8 @@ export default {
             else{
                 let path = '/cadastro'
                 let classForm = '.formSIGNUP'
-                this.postAxios(path,classForm)
+                if( this.postAxios(classForm)){
+                    this.$http.post(`${path}`, this.postAxios(classForm))
                     .then(res =>{
                         console.log(res)
                         message = 'Cadastrado com sucesso!'
@@ -191,39 +184,58 @@ export default {
                         if(error.response.status == 400){
                             let message = 'Cadastro inválido.'
                             this.alertToastr('warning', message )
+                            
                         }
                     })
+                }
+                    
             }
             
         },
         loginAxios: function(){
-            let emailValue = this.email
+            let emailValue = this.email  
             if(this.validaEmail(emailValue) == 0){
                 return 0
             }
             else{
                 console.log(emailValue )
-                this.postAxios('/login','.formLOGIN')
-                    .then(res => {
-                        console.log(res)
-                        console.log(res.data.token)
-                        localStorage.setItem('user-token', res.data.token)
-                        var expires = (new Date(Date.now()+ 86400)).toUTCString();
-                        document.cookie = `token=${res.data.token}; expires= ${expires};path=/;`
-                        document.cookie = `${res.data.token}`
+                console.log(this.searchParamss)
+                this.$store.dispatch('doLogin', this.postAxios('.formLOGIN'))
+                    .then( () => {
+                        this.alertToastr('success', 'Login has been done', 'Success')
+                        setTimeout(()=> {
+                            this.$router.push({name: 'teste'})
+                        },2000)
                     })
-                    .catch(error => {
-                        console.log(error)
-                        if(error.response.data.message == 'pass'){
-                            this.alertToastr('warning','Password Invalid','Error')
-                        }
-                        else if(error.response.data.message == 'invalid email'){
-                            this.alertToastr('warning','Email Invalid','Error')
-                        }
-                        else{
-                            this.alertToastr('success','Autenticado com sucesso.', 'Sucesso!')
-                        }
-                    })
+
+                // this.postAxios('/login','.formLOGIN')
+                //     .then(res => {
+                //         console.log(res)
+                //         console.log(res.data.token)
+                //         this.$store.commit('DEFINE_LOGGED_USER', {
+                //             token: res.data.token
+                //         })
+    
+
+                //         // localStorage.setItem('user-token', res.data.token)
+                //         var expires = (new Date(Date.now()+ 86400)).toUTCString();
+                //         document.cookie = `token=${res.data.token}; expires= ${expires};path=/;`
+                //         document.cookie = `${res.data.token}`
+                //         
+                       
+                //     })
+                //     .catch(error => {
+                //         console.log(error)
+                        // if(error.response.data.message == 'pass'){
+                        //     this.alertToastr('warning','Password Invalid','Error')
+                        // }
+                        // else if(error.response.data.message == 'invalid email'){
+                        //     this.alertToastr('warning','Email Invalid','Error')
+                        // }
+                        // else{
+                        //     this.alertToastr('success','Autenticado com sucesso.', 'Sucesso!')
+                        // }
+                    
             }
 
             
